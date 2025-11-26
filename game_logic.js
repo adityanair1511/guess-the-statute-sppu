@@ -15,56 +15,37 @@ try {
     db = firebase.firestore();
     console.log("🔥 Firebase Connected");
 } catch (error) {
-    console.error("Firebase Error. Check Config:", error);
-    alert("Warning: Database not connected. Check console.");
+    console.error("Firebase Config Missing:", error);
 }
 
-// --- THEME MANAGEMENT ---
+// --- THEME ---
 const htmlEl = document.documentElement;
-const themeIcon = document.getElementById('theme-icon');
 const savedTheme = localStorage.getItem('theme') || 'dark';
 htmlEl.setAttribute('data-theme', savedTheme);
-updateThemeIcon(savedTheme);
+document.getElementById('theme-icon').innerText = savedTheme === 'dark' ? '🌙' : '☀️';
 
 function toggleTheme() {
-    const currentTheme = htmlEl.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const newTheme = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     htmlEl.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    updateThemeIcon(newTheme);
+    document.getElementById('theme-icon').innerText = newTheme === 'dark' ? '🌙' : '☀️';
 }
-function updateThemeIcon(theme) { themeIcon.innerText = theme === 'dark' ? '🌙' : '☀️'; }
 
+// --- GAME VARS ---
+let score = 0, currentRound = 1, maxRounds = 5; 
+let playerName = "Student", selectedSubject = "", selectedSemester = "";
+let availableQuestions = [], usedQuestionIds = new Set(), currentLevelData = []; 
+let selectedQ = null, selectedA = null, isProcessing = false; 
+let mistakes = new Set(), isAppealMode = false;
 
-// --- GAME LOGIC ---
-let score = 0;
-let currentRound = 1;
-let maxRounds = 5; 
-let selectedSubject = "";
-let selectedSemester = "";
-let playerName = "Student";
-let availableQuestions = [];
-let usedQuestionIds = new Set(); 
-let currentLevelData = []; 
-let selectedQ = null; let selectedA = null;
-let isProcessing = false; 
-let mistakes = new Set(); 
-let isAppealMode = false;
-
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof GAME_DATA !== 'undefined' && GAME_DATA.length > 0) {
         const subjects = [...new Set(GAME_DATA.map(item => item.subject))].sort();
         const select = document.getElementById('subject-select');
         subjects.forEach(sub => {
-            const opt = document.createElement('option');
-            opt.value = sub; opt.innerText = sub; select.appendChild(opt);
+            const opt = document.createElement('option'); opt.value = sub; opt.innerText = sub; select.appendChild(opt);
         });
-        
-        // Initial load of global scores
         refreshLeaderboardUI();
-    } else {
-        alert("Game data not found! Run the Python script first.");
     }
 });
 
@@ -76,15 +57,12 @@ function updateSemesters() {
 
     if (subj) {
         let sems = new Set();
-        GAME_DATA.forEach(item => {
-            if (item.subject === subj) item.semester.forEach(s => sems.add(s));
-        });
-        
-        const sortedSems = [...sems].sort();
-        if (sortedSems.length === 0) {
+        GAME_DATA.forEach(item => { if (item.subject === subj) item.semester.forEach(s => sems.add(s)); });
+        const sorted = [...sems].sort();
+        if (sorted.length === 0) {
             const opt = document.createElement('option'); opt.innerText = "All Semesters"; opt.value = "ALL"; semSelect.appendChild(opt);
         } else {
-            sortedSems.forEach(s => {
+            sorted.forEach(s => {
                 const opt = document.createElement('option'); opt.value = s; opt.innerText = s; semSelect.appendChild(opt);
             });
         }
@@ -93,179 +71,175 @@ function updateSemesters() {
     }
 }
 
-// --- CLOUD LEADERBOARD LOGIC ---
+// --- SECURE LEADERBOARD ---
 async function refreshLeaderboardUI() {
+    if (!db) return;
     const subj = document.getElementById('subject-select').value;
     const sem = document.getElementById('semester-select').value;
     const title = document.getElementById('leaderboard-title');
     const indicator = document.getElementById('loading-indicator');
     
-    if (subj) title.innerText = `🏆 Global Scores: ${subj}`;
-    else title.innerText = `🏆 Global Scores`;
-
-    // Fetch from Firebase
+    title.innerText = subj ? `🏆 Global: ${subj}` : `🏆 Global Scores`;
     const tbody = document.getElementById('leaderboard-body');
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading cloud data...</td></tr>';
+    tbody.innerHTML = '';
     indicator.style.display = "inline";
 
     try {
-        // Query: Get Top 50 scores globally, then filter in JS to avoid complex index requirements
-        // (Simpler for setup)
         const q = db.collection("scores").orderBy("score", "desc").limit(100);
-        const querySnapshot = await q.get();
-        
-        let history = [];
-        querySnapshot.forEach((doc) => {
-            history.push(doc.data());
-        });
+        const snapshot = await q.get();
+        let history = snapshot.docs.map(doc => doc.data());
 
-        // Filter Client Side
+        // Client-side filter
         if (subj) history = history.filter(item => item.subject === subj);
         if (sem && sem !== "ALL") history = history.filter(item => item.semester === sem);
 
-        tbody.innerHTML = history.length ? '' : '<tr><td colspan="4" style="text-align:center; color: var(--text-secondary);">No scores yet. Be the first!</td></tr>';
+        tbody.innerHTML = history.length ? '' : '<tr><td colspan="4" style="text-align:center; color:#888;">No scores yet.</td></tr>';
         indicator.style.display = "none";
 
         history.slice(0, 10).forEach((entry, i) => {
             const tr = document.createElement('tr');
-            let rank = `#${i+1}`;
-            if(i===0) rank = "🥇"; if(i===1) rank = "🥈"; if(i===2) rank = "🥉";
             
-            // Format Date safely
-            let dateStr = entry.date;
-            if(entry.timestamp) dateStr = new Date(entry.timestamp.seconds * 1000).toLocaleDateString();
+            // 1. Rank
+            const tdRank = document.createElement('td');
+            if(i===0) tdRank.textContent = "🥇";
+            else if(i===1) tdRank.textContent = "🥈";
+            else if(i===2) tdRank.textContent = "🥉";
+            else tdRank.textContent = `#${i+1}`;
 
-            tr.innerHTML = `<td>${rank}</td><td>${entry.name}</td><td style="font-weight:bold;">${entry.score}</td><td style="font-size:0.8rem; color: var(--text-secondary);">${dateStr}</td>`;
+            // 2. Name (SECURE XSS PREVENTED HERE)
+            const tdName = document.createElement('td');
+            tdName.textContent = entry.name; // <--- Uses textContent, safe from HTML injection
+
+            // 3. Score
+            const tdScore = document.createElement('td');
+            tdScore.style.fontWeight = "bold";
+            tdScore.textContent = entry.score;
+
+            // 4. Date
+            const tdDate = document.createElement('td');
+            let d = entry.date;
+            if(entry.timestamp) d = new Date(entry.timestamp.seconds * 1000).toLocaleDateString();
+            tdDate.textContent = d;
+            tdDate.style.fontSize = "0.8rem";
+            tdDate.style.color = "var(--text-secondary)";
+
+            tr.append(tdRank, tdName, tdScore, tdDate);
             tbody.appendChild(tr);
         });
-
     } catch (e) {
-        console.error("Error fetching scores: ", e);
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--error-color);">Could not connect to Cloud Database.</td></tr>';
+        console.error(e);
+        indicator.style.display = "none";
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Offline mode</td></tr>';
     }
 }
 
-// --- GAME LOGIC (START & PLAY) ---
+// --- GAMEPLAY ---
 function startGame() {
-    const nameInput = document.getElementById('username').value.trim();
-    const subInput = document.getElementById('subject-select').value;
-    const semInput = document.getElementById('semester-select').value;
+    const name = document.getElementById('username').value.trim();
+    const subj = document.getElementById('subject-select').value;
+    const sem = document.getElementById('semester-select').value;
 
-    if (nameInput === "RESET") {
-        if(confirm("⚠ RESET PERSONAL DATA: This will clear your Spaced Repetition progress?")) {
-            localStorage.removeItem('lawGameRetention');
-            alert("Personal Study Data Cleared.");
-            location.reload();
+    if (name === "RESET") {
+        if(confirm("⚠ RESET: Wipe personal learning data?")) {
+            localStorage.removeItem('lawGameRetention'); location.reload();
         }
         return;
     }
+    if (!name || !subj || !sem) { alert("Please fill in all fields!"); return; }
 
-    if (!nameInput) { alert("Please enter your name!"); return; }
-    if (!subInput) { alert("Please select a subject!"); return; }
-    if (!semInput) { alert("Please select a semester!"); return; }
-
-    playerName = nameInput;
-    selectedSubject = subInput;
-    selectedSemester = semInput;
+    playerName = name; selectedSubject = subj; selectedSemester = sem;
     
-    // 1. FILTER
-    let rawQuestions = [];
-    if (selectedSemester === "ALL") {
-        rawQuestions = GAME_DATA.filter(item => item.subject === selectedSubject);
-    } else {
-        rawQuestions = GAME_DATA.filter(item => item.subject === selectedSubject && item.semester.includes(selectedSemester));
-    }
+    let raw = (sem === "ALL") ? GAME_DATA.filter(i => i.subject === subj) : GAME_DATA.filter(i => i.subject === subj && i.semester.includes(sem));
+    if (raw.length < 5) { alert("Need at least 5 questions."); return; }
 
-    if (rawQuestions.length < 5) { alert(`Not enough questions found (${rawQuestions.length}). Need 5.`); return; }
-
-    // 2. SMART SORTING (Local Spaced Repetition)
-    const retention = getRetentionData();
-    const now = new Date().getTime();
-    rawQuestions.forEach(q => {
-        const data = retention[q.id] || { level: 0, nextReview: 0 };
-        if (data.level === 0) q.priority = 100;
-        else if (now >= data.nextReview) q.priority = 50 + data.level;
-        else q.priority = 1;
+    // Smart Sort
+    const retention = JSON.parse(localStorage.getItem('lawGameRetention') || '{}');
+    const now = Date.now();
+    raw.forEach(q => {
+        const d = retention[q.id] || { level: 0, nextReview: 0 };
+        q.priority = (d.level === 0) ? 100 : (now >= d.nextReview ? 50 + d.level : 1);
         q.priority += Math.random();
     });
-    availableQuestions = rawQuestions.sort((a, b) => b.priority - a.priority);
+    availableQuestions = raw.sort((a, b) => b.priority - a.priority);
 
     mistakes.clear(); isAppealMode = false; currentRound = 1;
-
-    document.getElementById('start-screen').style.opacity = '0';
-    setTimeout(() => {
-        document.getElementById('start-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        document.getElementById('player-display').innerText = playerName;
-        startRound();
-    }, 300);
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    document.getElementById('player-display').innerText = playerName;
+    startRound();
 }
 
 function startRound() {
-    let displayRound = isAppealMode ? "Appeal" : `${currentRound} / ${maxRounds}`;
-    document.getElementById('round-display').innerText = `Round ${displayRound}`;
+    document.getElementById('round-display').innerText = isAppealMode ? "Appeal" : `Round ${currentRound}/${maxRounds}`;
+    let pool = [];
     
-    let roundPool = [];
     if (isAppealMode) {
-        roundPool = GAME_DATA.filter(item => mistakes.has(item.id));
-        currentLevelData = shuffle(roundPool);
+        pool = GAME_DATA.filter(i => mistakes.has(i.id));
+        currentLevelData = pool.sort(() => Math.random() - 0.5);
     } else {
-        let freshQuestions = availableQuestions.filter(q => !usedQuestionIds.has(q.id));
-        if (freshQuestions.length < 5) { usedQuestionIds.clear(); freshQuestions = availableQuestions; }
-        roundPool = freshQuestions.slice(0, 5);
-        roundPool.forEach(q => usedQuestionIds.add(q.id));
-        currentLevelData = roundPool; 
+        let fresh = availableQuestions.filter(q => !usedQuestionIds.has(q.id));
+        if (fresh.length < 5) { usedQuestionIds.clear(); fresh = availableQuestions; }
+        pool = fresh.slice(0, 5);
+        pool.forEach(q => usedQuestionIds.add(q.id));
+        currentLevelData = pool;
     }
-    renderBoard();
-}
-
-function renderBoard() {
-    const qCol = document.getElementById('col-questions'); const aCol = document.getElementById('col-answers');
+    
+    const qCol = document.getElementById('col-questions');
+    const aCol = document.getElementById('col-answers');
     qCol.innerHTML = ''; aCol.innerHTML = '';
-    let questions = currentLevelData.map(d => ({ id: d.id, text: d.question, type: 'q' }));
-    let answers = currentLevelData.map(d => ({ id: d.id, text: d.answer, type: 'a' }));
-    shuffle(questions).forEach((q, index) => createCard(q, qCol, index));
-    shuffle(answers).forEach((a, index) => createCard(a, aCol, index));
+    
+    let qCards = currentLevelData.map(d => ({id: d.id, text: d.question, type: 'q'}));
+    let aCards = currentLevelData.map(d => ({id: d.id, text: d.answer, type: 'a'}));
+    
+    // Shuffle display
+    qCards.sort(() => Math.random() - 0.5).forEach((item, i) => createCard(item, qCol, i));
+    aCards.sort(() => Math.random() - 0.5).forEach((item, i) => createCard(item, aCol, i));
 }
 
 function createCard(item, container, index) {
-    const div = document.createElement('div'); div.className = 'card'; div.textContent = item.text;
-    div.dataset.id = item.id; div.dataset.type = item.type; div.style.animationDelay = `${index * 0.1}s`; 
-    div.onclick = () => handleCardClick(div); container.appendChild(div);
+    const div = document.createElement('div');
+    div.className = 'card'; div.textContent = item.text;
+    div.dataset.id = item.id; div.dataset.type = item.type;
+    div.style.animationDelay = `${index * 0.1}s`;
+    div.onclick = () => handleCardClick(div);
+    container.appendChild(div);
 }
 
 function handleCardClick(card) {
-    if (isProcessing) return; 
-    if (card.classList.contains('matched') || card.classList.contains('selected')) return;
+    if (isProcessing || card.classList.contains('matched') || card.classList.contains('selected')) return;
     const type = card.dataset.type;
-    const currentSelected = type === 'q' ? selectedQ : selectedA;
-    if (currentSelected) currentSelected.classList.remove('selected');
+    const current = type === 'q' ? selectedQ : selectedA;
+    if (current) current.classList.remove('selected');
     card.classList.add('selected');
     if (type === 'q') selectedQ = card; else selectedA = card;
     if (selectedQ && selectedA) checkMatch();
 }
 
 function checkMatch() {
-    const feedback = document.getElementById('feedback');
+    const fb = document.getElementById('feedback');
     const id1 = parseInt(selectedQ.dataset.id); const id2 = parseInt(selectedA.dataset.id);
-    
+
     if (id1 === id2) {
-        score += 10; feedback.innerText = "Excellent! +10"; feedback.style.color = "var(--success-color)";
+        score += 10; fb.innerText = "Correct! +10"; fb.style.color = "var(--success-color)";
         if (!isAppealMode) updateRetention(id1, true);
+        
         selectedQ.classList.add('matched'); selectedA.classList.add('matched');
         selectedQ.classList.remove('selected'); selectedA.classList.remove('selected');
         selectedQ = null; selectedA = null;
+        
         if (document.querySelectorAll('.card:not(.matched)').length === 0) setTimeout(nextRound, 800);
     } else {
         isProcessing = true; score = Math.max(0, score - 5);
-        feedback.innerText = "Try again! -5"; feedback.style.color = "var(--error-color)";
+        fb.innerText = "Wrong! -5"; fb.style.color = "var(--error-color)";
         selectedQ.classList.add('shake'); selectedA.classList.add('shake');
-        if (!isAppealMode) updateRetention(parseInt(selectedQ.dataset.id), false);
-        mistakes.add(parseInt(selectedQ.dataset.id)); mistakes.add(parseInt(selectedA.dataset.id));
+        
+        if (!isAppealMode) updateRetention(id1, false);
+        mistakes.add(id1); mistakes.add(id2); // Track both sides
+        
         setTimeout(() => {
             if(selectedQ) selectedQ.classList.remove('selected', 'shake');
             if(selectedA) selectedA.classList.remove('selected', 'shake');
-            selectedQ = null; selectedA = null; feedback.innerText = ""; isProcessing = false; 
+            selectedQ = null; selectedA = null; fb.innerText = ""; isProcessing = false;
         }, 600);
     }
     document.getElementById('score').innerText = score;
@@ -273,7 +247,7 @@ function checkMatch() {
 
 function nextRound() {
     if (isAppealMode) endGame();
-    else if (currentRound < maxRounds) { currentRound++; startRound(); } 
+    else if (currentRound < maxRounds) { currentRound++; startRound(); }
     else endGame();
 }
 
@@ -283,22 +257,20 @@ function endGame() {
     document.getElementById('final-score').innerText = score;
 
     const appealBtn = document.getElementById('appeal-btn');
-    const endTitle = document.getElementById('end-title');
-    const endMsg = document.getElementById('end-message');
-
     if (isAppealMode) {
-        endTitle.innerText = "Appeal Adjourned"; endMsg.innerText = "You have reviewed your case files.";
-        appealBtn.style.display = 'none'; 
+        document.getElementById('end-title').innerText = "Appeal Complete";
+        document.getElementById('end-message').innerText = "Review finished.";
+        appealBtn.style.display = 'none';
     } else {
         if (mistakes.size > 0) {
-            endTitle.innerText = "Session Adjourned"; endMsg.innerText = `You have ${mistakes.size} case files pending review.`;
-            appealBtn.style.display = 'inline-block'; appealBtn.innerText = `File an Appeal (${mistakes.size} Mistakes)`;
+            document.getElementById('end-title').innerText = "Session Adjourned";
+            document.getElementById('end-message').innerText = `${mistakes.size} items to review.`;
+            appealBtn.style.display = 'inline-block';
         } else {
-            endTitle.innerText = "Perfect Record!"; endMsg.innerText = "No mistakes found. Court is dismissed.";
+            document.getElementById('end-title').innerText = "Perfect Session!";
             appealBtn.style.display = 'none';
         }
-        // SAVE SCORE TO FIREBASE ON GAME COMPLETION
-        saveScoreToCloud(); 
+        if (db) saveScoreToCloud();
     }
 }
 
@@ -309,50 +281,30 @@ function startAppealMode() {
     startRound();
 }
 
-// --- DATA UTILITIES ---
+function updateRetention(id, success) {
+    const data = JSON.parse(localStorage.getItem('lawGameRetention') || '{}');
+    const entry = data[id] || { level: 0, nextReview: 0 };
+    if (success) {
+        entry.level++;
+        entry.nextReview = Date.now() + (Math.ceil(Math.pow(2, entry.level)) * 86400000);
+    } else {
+        entry.level = 0; entry.nextReview = 0;
+    }
+    data[id] = entry;
+    localStorage.setItem('lawGameRetention', JSON.stringify(data));
+}
 
-function getRetentionData() { return JSON.parse(localStorage.getItem('lawGameRetention') || '{}'); }
-function saveRetentionData(data) { localStorage.setItem('lawGameRetention', JSON.stringify(data)); }
-
-function updateRetention(questionId, isCorrect) {
-    const data = getRetentionData();
-    const entry = data[questionId] || { level: 0, nextReview: 0 };
-    if (isCorrect) {
-        entry.level += 1;
-        const daysToAdd = Math.ceil(Math.pow(2, entry.level)); 
-        const nextDate = new Date(); nextDate.setDate(nextDate.getDate() + daysToAdd);
-        entry.nextReview = nextDate.getTime();
-    } else { entry.level = 0; entry.nextReview = 0; }
-    data[questionId] = entry;
-    saveRetentionData(data);
+function saveScoreToCloud() {
+    const stat = document.getElementById('upload-status');
+    stat.innerText = "Saving...";
+    db.collection("scores").add({
+        name: playerName, score: score, subject: selectedSubject, semester: selectedSemester,
+        date: new Date().toLocaleDateString(), timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => stat.innerText = "Saved to Cloud ✓").catch(e => { console.error(e); stat.innerText = "Save Error"; });
 }
 
 function resetAllProgress() {
-    if(confirm("Are you sure? This will reset all your personal Spaced Repetition learning progress.")) {
-        localStorage.removeItem('lawGameRetention'); alert("Progress reset."); location.reload();
+    if(confirm("Reset personal study data?")) {
+        localStorage.removeItem('lawGameRetention'); location.reload();
     }
 }
-
-// --- FIREBASE SAVE ---
-function saveScoreToCloud() {
-    document.getElementById('upload-status').innerText = "Saving to cloud...";
-    
-    db.collection("scores").add({
-        name: playerName,
-        score: score,
-        subject: selectedSubject,
-        semester: selectedSemester,
-        date: new Date().toLocaleDateString(),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    })
-    .then((docRef) => {
-        console.log("Score written with ID: ", docRef.id);
-        document.getElementById('upload-status').innerText = "Saved to Cloud ✓";
-    })
-    .catch((error) => {
-        console.error("Error adding score: ", error);
-        document.getElementById('upload-status').innerText = "Error Saving (Offline?)";
-    });
-}
-
-function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
