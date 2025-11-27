@@ -4,142 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Law Mastery</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        /* --- THEME VARIABLES --- */
+        /* --- 1. THEME VARIABLES --- */
         :root {
-            --bg-color: #f4f6f8; --surface-color: #ffffff; --text-primary: #1a202c; --text-secondary: #718096;
-            --accent-color: #3b82f6; --accent-hover: #2563eb; --success-color: #10b981; --error-color: #ef4444;
-            --border-color: #e2e8f0; --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); --transition-speed: 0.3s;
-            --deck-bg: #eef2ff; /* Light blue for question deck area */
-        }
-        [data-theme="dark"] {
-            --bg-color: #0f172a; --surface-color: #1e293b; --text-primary: #f1f5f9; --text-secondary: #94a3b8;
-            --accent-color: #60a5fa; --accent-hover: #3b82f6; --success-color: #34d399; --error-color: #f87171;
-            --border-color: #334155; --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-            --deck-bg: #1e293b;
+            --bg-color: #f8fafc; 
+            --surface-color: #ffffff; 
+            --text-primary: #1e293b; 
+            --text-secondary: #64748b;
+            --accent-color: #3b82f6; 
+            --accent-soft: rgba(59, 130, 246, 0.15);
+            --border-color: #e2e8f0;
+            --error-bg: #fee2e2; --error-border: #ef4444; --error-text: #b91c1c;
+            --success-bg: #dcfce7; --success-border: #22c55e; --success-text: #15803d;
+            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+            --transition-speed: 0.3s;
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; transition: background-color var(--transition-speed), color var(--transition-speed); box-sizing: border-box; }
-        h1 { font-weight: 800; letter-spacing: -1px; margin-bottom: 0.5rem; text-align: center; font-size: 1.8rem; }
-        p { color: var(--text-secondary); line-height: 1.5; text-align: center; margin-top: 0; }
+        [data-theme="dark"] {
+            --bg-color: #0f172a; 
+            --surface-color: #1e293b; 
+            --text-primary: #f1f5f9; 
+            --text-secondary: #94a3b8;
+            --accent-color: #60a5fa; 
+            --accent-soft: rgba(96, 165, 250, 0.2);
+            --border-color: #334155;
+            --error-bg: #450a0a; --error-border: #f87171; --error-text: #fecaca;
+            --success-bg: #052e16; --success-border: #4ade80; --success-text: #bbf7d0;
+            --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+        }
+
+        /* --- 2. BASE STYLES --- */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-primary); 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            transition: background-color var(--transition-speed); 
+            box-sizing: border-box; 
+            padding-bottom: 80px; 
+        }
+
+        h1 { 
+            font-weight: 800; letter-spacing: -0.5px; margin-bottom: 5px; text-align: center; font-size: 2rem; 
+            background: linear-gradient(135deg, var(--accent-color), #8b5cf6); 
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; 
+        }
         
-        .screen { display: none; width: 100%; max-width: 900px; background: var(--surface-color); padding: 30px; border-radius: 20px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); animation: fadeIn 0.5s ease-out; box-sizing: border-box; }
+        /* Updated Branding & Instructions */
+        .branding-container {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 25px auto;
+        }
+        .mission-text {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            opacity: 0.9;
+        }
+        .instruction-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            background: var(--accent-soft);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-color);
+        }
+
+        /* --- 3. CONTAINERS --- */
+        .screen { display: none; width: 100%; max-width: 800px; background: var(--surface-color); padding: 30px; border-radius: 24px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); animation: fadeIn 0.4s ease-out; box-sizing: border-box; }
         .active { display: block; }
 
         .input-group { margin-bottom: 15px; width: 100%; max-width: 400px; margin: 0 auto 15px auto; }
-        input, select { width: 100%; padding: 14px; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-size: 16px; transition: 0.2s; box-sizing: border-box; -webkit-appearance: none; appearance: none; }
-        input:focus, select:focus { outline: none; border-color: var(--accent-color); }
+        input, select { width: 100%; padding: 14px; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-size: 16px; transition: 0.2s; box-sizing: border-box; -webkit-appearance: none; appearance: none; font-weight: 500; }
+        input:focus, select:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px var(--accent-soft); }
 
-        button.btn-primary { background: var(--accent-color); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; max-width: 400px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; touch-action: manipulation; }
+        button.btn-primary { background: var(--accent-color); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%; max-width: 400px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; touch-action: manipulation; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         button.btn-primary:active { transform: scale(0.98); }
-        button.btn-appeal { background: var(--error-color); }
-        .text-btn { display:block; margin: 15px auto; color: var(--text-secondary); background:none; border:none; cursor:pointer; font-size:0.9rem; text-decoration:underline; padding: 10px; }
-        .theme-toggle { position: absolute; top: 15px; right: 15px; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; box-shadow: var(--card-shadow); z-index: 100; }
+        button.btn-appeal { background: var(--error-border); color: white; }
+        
+        .text-btn { display:block; margin: 15px auto; color: var(--text-secondary); background:none; border:none; cursor:pointer; font-size:0.85rem; text-decoration:underline; opacity: 0.8; }
 
-        /* Game Board & Grid */
-        .stats-bar { display: flex; justify-content: space-between; background: var(--bg-color); padding: 12px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; position: sticky; top: 0; z-index: 90; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .theme-toggle { position: absolute; top: 15px; right: 15px; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; box-shadow: var(--card-shadow); z-index: 100; transition: transform 0.2s; }
+        .theme-toggle:hover { transform: scale(1.1); }
+
+        /* --- 4. GAME BOARD --- */
+        .stats-bar { display: flex; justify-content: space-between; background: var(--bg-color); padding: 12px 20px; border-radius: 16px; margin-bottom: 25px; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; border: 1px solid var(--border-color); }
         .stats-bar span strong { color: var(--text-primary); display: block; font-size: 1.1rem; }
 
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-        .col { display: flex; flex-direction: column; gap: 15px; }
+        .col { display: flex; flex-direction: column; gap: 12px; }
 
-        /* Cards */
-        .card { background: var(--bg-color); padding: 20px; border-radius: 16px; border: 2px solid transparent; color: var(--text-primary); cursor: pointer; font-weight: 500; font-size: 1rem; line-height: 1.5; position: relative; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transform: translateY(10px); animation: popIn 0.5s forwards; user-select: none; -webkit-tap-highlight-color: transparent; transition: all 0.2s; }
-        .card:hover { transform: translateY(-2px); border-color: var(--accent-color); }
-        
-        /* Selected State */
-        .card.selected { background: rgba(59, 130, 246, 0.1); border-color: var(--accent-color); color: var(--accent-color); box-shadow: 0 0 0 2px var(--accent-color); transform: scale(1.02); z-index: 10; }
-        
-        /* Matched State */
-        .card.matched { background: var(--success-color); border-color: var(--success-color); opacity: 0; pointer-events: none; transform: scale(0.8); }
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        .card { background: var(--bg-color); padding: 18px; border-radius: 14px; border: 2px solid transparent; color: var(--text-primary); cursor: pointer; font-weight: 500; font-size: 0.95rem; line-height: 1.5; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transform: translateY(10px); animation: popIn 0.5s forwards; user-select: none; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
+        .card:hover { transform: translateY(-2px); border-color: var(--accent-color); background: var(--surface-color); }
+        .card.selected { background: var(--accent-soft); border-color: var(--accent-color); color: var(--accent-color); font-weight: 700; transform: scale(1.02); }
+        .card.matched { background: var(--success-bg); border-color: var(--success-border); color: var(--success-text); opacity: 0; pointer-events: none; transform: scale(0.9); }
+        .card.shake { background: var(--error-bg) !important; border-color: var(--error-border) !important; color: var(--error-text) !important; animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
 
-        table { width: 100%; margin-top: 20px; border-collapse: separate; border-spacing: 0 8px; font-size: 0.9rem; }
-        th { text-align: left; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; padding: 8px; }
-        td { background: var(--bg-color); padding: 12px; }
-        td:first-child { border-radius: 10px 0 0 10px; }
-        td:last-child { border-radius: 0 10px 10px 0; }
-
-        /* --- MOBILE OVERHAUL (The Magic Part) --- */
-        @media (max-width: 600px) {
-            body { padding: 0; background: var(--bg-color); }
-            .screen { border-radius: 0; border: none; box-shadow: none; padding: 20px; margin-top: 50px; min-height: 100vh; }
+        /* --- 5. MOBILE LAYOUT --- */
+        @media (max-width: 700px) {
+            body { padding: 10px; padding-bottom: 100px; }
+            h1 { font-size: 1.6rem; margin-top: 10px; }
+            .screen { padding: 20px 15px; border: none; background: transparent; box-shadow: none; width: 100%; }
+            .game-grid { display: flex; flex-direction: column; gap: 0; }
             
-            /* Change Grid to Flex Column */
-            .game-grid { display: flex; flex-direction: column; gap: 20px; }
-            
-            /* --- TOP SECTION: QUESTIONS (Horizontal Deck) --- */
-            #col-questions {
-                display: flex;
-                flex-direction: row; /* Horizontal */
-                overflow-x: auto; /* Scrollable */
-                scroll-snap-type: x mandatory; /* Cards snap into place */
-                padding: 10px 5px 20px 5px; /* Space for shadow */
-                gap: 15px;
-                /* Label for the section */
-                position: relative;
-                border-bottom: 1px solid var(--border-color);
-            }
-            
-            /* Add a label above questions */
-            #col-questions::before {
-                content: "1. SWIPE & SELECT A TERM 👇";
-                position: absolute;
-                top: -25px;
-                left: 5px;
-                font-size: 0.75rem;
-                font-weight: 800;
-                color: var(--accent-color);
-                letter-spacing: 1px;
-            }
+            #col-questions { padding-bottom: 25px; position: relative; }
+            #col-questions::before { content: "QUESTIONS"; font-size: 0.7rem; letter-spacing: 1.5px; font-weight: 800; color: var(--text-secondary); margin-bottom: 8px; display: block; opacity: 0.7; }
 
-            /* Style the Question Cards like a Deck */
-            #col-questions .card {
-                min-width: 80vw; /* Take up most of screen width */
-                scroll-snap-align: center; /* Snap to center */
-                margin-bottom: 0;
-                background: var(--surface-color);
-                border: 2px solid var(--border-color);
-                height: 140px; /* Fixed height for uniformity */
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                font-size: 1.1rem;
-            }
+            .col:first-child { border-bottom: 2px dashed var(--border-color); margin-bottom: 25px; }
+            .col:first-child::after { content: "MATCH WITH 👇"; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: var(--bg-color); padding: 0 10px; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); }
 
-            /* --- BOTTOM SECTION: ANSWERS (Vertical List) --- */
-            #col-answers {
-                position: relative;
-                padding-top: 10px;
-            }
-
-            /* Add a label above answers */
-            #col-answers::before {
-                content: "2. TAP THE MATCHING DEFINITION 👇";
-                display: block;
-                margin-bottom: 10px;
-                font-size: 0.75rem;
-                font-weight: 800;
-                color: var(--success-color);
-                letter-spacing: 1px;
-            }
-
-            #col-answers .card {
-                margin-bottom: 0;
-                padding: 18px;
-                font-size: 0.95rem;
-                min-height: 80px; /* Make touch targets big */
-                display: flex;
-                align-items: center;
-                border: 1px solid var(--border-color);
-            }
+            #col-answers { padding-top: 5px; }
+            #col-answers::before { content: "ANSWERS"; font-size: 0.7rem; letter-spacing: 1.5px; font-weight: 800; color: var(--text-secondary); margin-bottom: 8px; display: block; opacity: 0.7; }
+            .card { padding: 16px; margin-bottom: 0; background: var(--surface-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
         }
+
+        /* --- 6. VIBE-CODED FOOTER (Updated) --- */
+        .vibe-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            width: max-content;
+            max-width: 90%;
+            white-space: nowrap;
+        }
+
+        [data-theme="dark"] .vibe-footer {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255,255,255,0.05);
+        }
+
+        .insta-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 700;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
+            -webkit-background-clip: text; background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            transition: opacity 0.2s;
+        }
+        .insta-link:hover { opacity: 0.8; }
 
         @keyframes popIn { from { opacity: 0; } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; font-size: 0.9rem; }
+        th { text-align: left; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; padding: 10px; letter-spacing: 0.5px; }
+        td { background: var(--bg-color); padding: 12px; border-bottom: 1px solid var(--border-color); }
+        td:first-child { border-radius: 8px 0 0 8px; }
+        td:last-child { border-radius: 0 8px 8px 0; }
     </style>
 </head>
 <body>
@@ -147,16 +184,23 @@
 
     <div id="start-screen" class="screen active">
         <h1>⚖️ Law Mastery</h1>
-        <p>Select your subject to compete globally.</p><br>
+        
+        <div class="branding-container">
+            <p class="mission-text">
+                Built by an SCLC, Pune student. Ace your exams and be the sharpest lawyer in the room.
+            </p>
+        </div>
+
         <div class="input-group"><input type="text" id="username" placeholder="Enter your name..." autocomplete="off"/></div>
         <div class="input-group"><select id="subject-select" onchange="updateSemesters()"><option value="" disabled selected>Select Subject</option></select></div>
         <div class="input-group"><select id="semester-select" disabled onchange="refreshLeaderboardUI()"><option value="" disabled selected>Select Semester</option></select></div>
+        
         <button class="btn-primary" onclick="startGame()">Start Game</button>
         <button class="text-btn" onclick="resetAllProgress()">⚠ Reset Personal Study Data</button>
         
         <div style="margin-top: 30px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 id="leaderboard-title" style="font-size: 1.1rem; margin:0;">🏆 Global Scores</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 id="leaderboard-title" style="font-size: 1rem; margin:0; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary);">Global Top Scores</h3>
                 <span id="loading-indicator" style="font-size: 0.7rem; color: var(--accent-color); display:none;">Connecting...</span>
             </div>
             <div style="overflow-x: auto;"> 
@@ -186,13 +230,18 @@
     <div id="end-screen" class="screen" style="text-align: center;">
         <h1 id="end-title">Session Complete!</h1>
         <p id="end-message">All rounds finished.</p><br>
-        <div style="background: var(--bg-color); padding: 30px; border-radius: 20px; display: inline-block; margin-bottom: 30px; width: 100%;">
-            <p style="margin:0; font-size: 0.9rem;">FINAL SCORE</p>
-            <h2 id="final-score" style="margin: 10px 0 0 0; font-size: 3rem; color: var(--accent-color);">0</h2>
-            <p id="upload-status" style="font-size: 0.8rem; color: var(--success-color); margin-top: 10px;">Saved to Cloud ✓</p>
+        <div style="background: var(--bg-color); padding: 30px; border-radius: 20px; display: inline-block; margin-bottom: 30px; width: 100%; border: 1px solid var(--border-color);">
+            <p style="margin:0; font-size: 0.8rem; letter-spacing: 1px; color:var(--text-secondary); text-transform: uppercase;">Final Score</p>
+            <h2 id="final-score" style="margin: 5px 0 0 0; font-size: 3.5rem; color: var(--accent-color);">0</h2>
+            <p id="upload-status" style="font-size: 0.8rem; color: var(--success-text); margin-top: 10px; font-weight:600;">Saved to Cloud ✓</p>
         </div><br>
         <button id="appeal-btn" class="btn-primary btn-appeal" style="display: none;" onclick="startAppealMode()">File an Appeal ⚖️</button>
         <button class="btn-primary" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <div class="vibe-footer">
+        <span>vibecoded. (bugs expected) | Support & Connect: </span>
+        <a href="https://www.instagram.com/adityanair_yt" target="_blank" class="insta-link">@adityanair_yt</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
